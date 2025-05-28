@@ -355,16 +355,16 @@ export class DatabaseStorage implements IStorage {
     }
 
     const defaultPatterns = [
-      { category: "phishing", pattern: "verify your account", weight: 0.8, description: "Account verification scam" },
-      { category: "phishing", pattern: "click here to claim", weight: 0.7, description: "Prize claim scam" },
-      { category: "financial", pattern: "send money", weight: 0.9, description: "Money transfer scam" },
-      { category: "financial", pattern: "urgent payment", weight: 0.8, description: "Urgent payment scam" },
-      { category: "lottery", pattern: "congratulations you won", weight: 0.9, description: "Lottery winner scam" },
-      { category: "lottery", pattern: "kbc winner", weight: 0.95, description: "KBC lottery scam" },
-      { category: "tech_support", pattern: "microsoft support", weight: 0.85, description: "Fake Microsoft support" },
-      { category: "tech_support", pattern: "computer virus", weight: 0.7, description: "Fake virus alert" },
-      { category: "romance", pattern: "lonely and looking", weight: 0.6, description: "Romance scam indicator" },
-      { category: "investment", pattern: "guaranteed returns", weight: 0.8, description: "Investment fraud" }
+      { category: "phishing", pattern: "verify your account", weight: 80, description: "Account verification scam" },
+      { category: "phishing", pattern: "click here to claim", weight: 70, description: "Prize claim scam" },
+      { category: "financial", pattern: "send money", weight: 90, description: "Money transfer scam" },
+      { category: "financial", pattern: "urgent payment", weight: 80, description: "Urgent payment scam" },
+      { category: "lottery", pattern: "congratulations you won", weight: 90, description: "Lottery winner scam" },
+      { category: "lottery", pattern: "kbc winner", weight: 95, description: "KBC lottery scam" },
+      { category: "tech_support", pattern: "microsoft support", weight: 85, description: "Fake Microsoft support" },
+      { category: "tech_support", pattern: "computer virus", weight: 70, description: "Fake virus alert" },
+      { category: "romance", pattern: "lonely and looking", weight: 60, description: "Romance scam indicator" },
+      { category: "investment", pattern: "guaranteed returns", weight: 80, description: "Investment fraud" }
     ];
 
     for (const pattern of defaultPatterns) {

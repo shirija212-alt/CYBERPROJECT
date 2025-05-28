@@ -296,6 +296,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Official Data Sources Integration Status
+  app.get("/api/official-sources/status", async (req, res) => {
+    try {
+      const { officialDataSources } = await import('./official-data-sources');
+      const status = officialDataSources.getIntegrationStatus();
+      res.json(status);
+    } catch (error) {
+      console.error('Error getting official sources status:', error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Configure API Keys for Official Sources
+  app.post("/api/official-sources/configure", async (req, res) => {
+    try {
+      const { source, apiKey } = req.body;
+      
+      if (!source || !apiKey) {
+        return res.status(400).json({ error: "Source and API key are required" });
+      }
+
+      const { officialDataSources } = await import('./official-data-sources');
+      officialDataSources.setAPIKey(source, apiKey);
+
+      res.json({ message: `API key configured for ${source}` });
+    } catch (error) {
+      console.error('Error configuring API key:', error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Enhanced Phone Verification with Official Sources
+  app.post("/api/scan/phone/official", async (req, res) => {
+    try {
+      const { phoneNumber } = req.body;
+      
+      if (!phoneNumber || typeof phoneNumber !== 'string') {
+        return res.status(400).json({ error: "Phone number is required" });
+      }
+
+      const { officialDataSources } = await import('./official-data-sources');
+      const officialResult = await officialDataSources.verifyPhoneNumberOfficial(phoneNumber);
+
+      res.json({
+        phoneNumber: officialResult.phoneNumber,
+        threatLevel: officialResult.threatLevel,
+        isVerified: officialResult.isVerified,
+        confidence: officialResult.confidence,
+        officialSources: officialResult.officialSources,
+        governmentVerified: officialResult.governmentVerified,
+        totalReports: officialResult.totalReports,
+        lastUpdated: officialResult.lastUpdated
+      });
+    } catch (error) {
+      console.error('Error in official phone verification:', error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Report submission endpoint
   app.post("/api/report", async (req, res) => {
     try {

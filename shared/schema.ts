@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -33,7 +33,7 @@ export const scamPatterns = pgTable("scam_patterns", {
   id: serial("id").primaryKey(),
   category: text("category").notNull(), // 'loan', 'rummy', 'phishing', 'upi'
   pattern: text("pattern").notNull(),
-  weight: integer("weight").notNull(), // importance of this pattern
+  weight: integer("weight").notNull(), // importance of this pattern (1-100)
   description: text("description"),
 });
 
