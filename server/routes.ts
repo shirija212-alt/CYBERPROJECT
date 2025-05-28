@@ -522,26 +522,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Report submission endpoint
+  // Enhanced Smart Report submission with AI verification and auto-submission
   app.post("/api/report", async (req, res) => {
     try {
       const reportData = insertReportSchema.parse(req.body);
       
-      const report = await storage.createReport({
-        ...reportData,
+      // Use Smart Report System for AI verification and auto-submission
+      const { smartReportSystem } = await import('./smart-report-system');
+      
+      const userReportData = {
+        type: reportData.type,
+        content: reportData.content,
+        description: reportData.description || '',
+        evidence: req.body.evidence || [],
+        timestamp: new Date(),
+        location: req.body.location,
         reporterIp: req.ip
-      });
+      };
+
+      const processingResult = await smartReportSystem.processUserReport(userReportData);
 
       res.json({
-        id: report.id,
-        message: "Report submitted successfully",
-        timestamp: report.timestamp
+        id: processingResult.reportId,
+        message: processingResult.userMessage,
+        status: processingResult.finalStatus,
+        aiVerification: {
+          confidence: processingResult.confidenceAnalysis.confidence,
+          isGenuine: processingResult.confidenceAnalysis.isGenuine,
+          riskLevel: processingResult.confidenceAnalysis.riskLevel
+        },
+        cyberCrimeSubmission: processingResult.cyberCrimeSubmission ? {
+          submitted: true,
+          referenceNumber: processingResult.cyberCrimeSubmission.referenceNumber,
+          trackingUrl: processingResult.cyberCrimeSubmission.trackingUrl,
+          status: processingResult.cyberCrimeSubmission.status
+        } : null,
+        nextSteps: processingResult.nextSteps,
+        fraudPatterns: processingResult.aiVerification.fraudPatterns,
+        timestamp: new Date()
       });
     } catch (error) {
+      console.error('Error in smart report processing:', error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ error: "Invalid report data", details: error.errors });
       }
-      res.status(500).json({ error: "Internal server error" });
+      res.status(500).json({ error: "Report processing failed" });
     }
   });
 

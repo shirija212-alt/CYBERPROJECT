@@ -17,6 +17,7 @@ export default function Report() {
     description: ""
   });
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [submissionResult, setSubmissionResult] = useState<any>(null);
   
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -26,14 +27,29 @@ export default function Report() {
       const response = await apiRequest("POST", "/api/report", data);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (response) => {
       setIsSubmitted(true);
+      setSubmissionResult(response);
       setFormData({ type: "", content: "", description: "" });
       queryClient.invalidateQueries({ queryKey: ["/api/reports"] });
-      toast({
-        title: "Report Submitted",
-        description: "Thank you for helping protect the community!",
-      });
+      
+      // Show enhanced toast based on AI verification and submission status
+      if (response.cyberCrimeSubmission?.submitted) {
+        toast({
+          title: "🚨 Report Verified & Submitted to Authorities",
+          description: `AI verified with ${response.aiVerification.confidence}% confidence. Reference: ${response.cyberCrimeSubmission.referenceNumber}`
+        });
+      } else if (response.aiVerification?.isGenuine) {
+        toast({
+          title: "✅ Report Verified by AI",
+          description: `${response.aiVerification.confidence}% confidence. Under review by security team.`
+        });
+      } else {
+        toast({
+          title: "📝 Report Received",
+          description: "Your report is being analyzed and will be reviewed shortly."
+        });
+      }
     },
     onError: (error: any) => {
       toast({
@@ -69,33 +85,175 @@ export default function Report() {
     { value: "other", label: "Other" }
   ];
 
-  if (isSubmitted) {
+  if (isSubmitted && submissionResult) {
+    const { aiVerification, cyberCrimeSubmission, nextSteps, fraudPatterns } = submissionResult;
+    
     return (
       <div className="min-h-screen py-8">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Card className="bg-green-50 border-green-200">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          {/* Main Success Card */}
+          <Card className={`mb-6 ${cyberCrimeSubmission?.submitted ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
             <CardContent className="p-8 text-center">
-              <CheckCircle className="mx-auto text-green-600 mb-4" size={64} />
-              <h1 className="text-2xl font-bold text-green-800 mb-4">Report Submitted Successfully!</h1>
-              <p className="text-green-700 mb-6">
-                Thank you for helping protect the community. Your report has been received and will be reviewed by our security team.
-              </p>
-              <div className="space-y-3">
-                <Button 
-                  onClick={() => setIsSubmitted(false)}
-                  className="bg-green-600 hover:bg-green-700"
-                >
-                  Submit Another Report
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={() => window.location.href = '/'}
-                >
-                  Return to Home
-                </Button>
-              </div>
+              <CheckCircle className={`mx-auto mb-4 ${cyberCrimeSubmission?.submitted ? 'text-red-600' : 'text-green-600'}`} size={64} />
+              
+              {cyberCrimeSubmission?.submitted ? (
+                <div>
+                  <h1 className="text-2xl font-bold text-red-800 mb-4">🚨 Report Submitted to Indian Cyber Crime Portal!</h1>
+                  <div className="bg-white rounded-lg p-6 mb-6 border border-red-200">
+                    <div className="grid md:grid-cols-2 gap-4 text-left">
+                      <div>
+                        <p className="text-sm text-red-600 font-medium">Official Reference Number</p>
+                        <p className="text-lg font-bold text-red-800">{cyberCrimeSubmission.referenceNumber}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-red-600 font-medium">AI Confidence Score</p>
+                        <p className="text-lg font-bold text-red-800">{aiVerification.confidence}% Verified</p>
+                      </div>
+                    </div>
+                    {cyberCrimeSubmission.trackingUrl && (
+                      <div className="mt-4 pt-4 border-t border-red-200">
+                        <p className="text-sm text-red-600 mb-2">Track Your Complaint:</p>
+                        <a 
+                          href={cyberCrimeSubmission.trackingUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-red-700 hover:text-red-900 underline font-medium"
+                        >
+                          {cyberCrimeSubmission.trackingUrl}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-red-700 mb-6">
+                    Your report has been verified by AI and automatically submitted to authorities. 
+                    Investigation will begin within 24 hours.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <h1 className="text-2xl font-bold text-green-800 mb-4">✅ Report Verified & Under Review</h1>
+                  <div className="bg-white rounded-lg p-6 mb-6 border border-green-200">
+                    <div className="grid md:grid-cols-2 gap-4 text-left">
+                      <div>
+                        <p className="text-sm text-green-600 font-medium">AI Verification Status</p>
+                        <p className="text-lg font-bold text-green-800">
+                          {aiVerification?.isGenuine ? 'Genuine Threat Detected' : 'Under Analysis'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-green-600 font-medium">Confidence Score</p>
+                        <p className="text-lg font-bold text-green-800">{aiVerification?.confidence || 0}%</p>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-green-700 mb-6">
+                    Thank you for helping protect the community. Our AI has analyzed your report and it's being reviewed by our security team.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
+
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* AI Analysis Results */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  🤖 AI Analysis Results
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-slate-600">Risk Level:</span>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    aiVerification?.riskLevel === 'HIGH' ? 'bg-red-100 text-red-800' :
+                    aiVerification?.riskLevel === 'MEDIUM' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-green-100 text-green-800'
+                  }`}>
+                    {aiVerification?.riskLevel || 'LOW'}
+                  </span>
+                </div>
+                
+                {fraudPatterns?.length > 0 && (
+                  <div>
+                    <p className="text-sm text-slate-600 mb-2">Detected Fraud Patterns:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {fraudPatterns.map((pattern: string, index: number) => (
+                        <span key={index} className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">
+                          {pattern}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-slate-50 p-4 rounded-lg">
+                  <p className="text-sm text-slate-600 mb-2">AI Recommendation:</p>
+                  <p className="text-sm font-medium">
+                    {aiVerification?.isGenuine 
+                      ? "Genuine threat detected - Recommended for official investigation"
+                      : "Report requires additional verification before escalation"
+                    }
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Next Steps */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  📋 What Happens Next
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {nextSteps?.map((step: string, index: number) => (
+                    <div key={index} className="flex items-start space-x-3">
+                      <span className="bg-blue-100 text-blue-800 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold mt-0.5">
+                        {index + 1}
+                      </span>
+                      <span className="text-sm text-slate-700">{step}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {cyberCrimeSubmission?.submitted && (
+                  <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <h4 className="font-medium text-red-800 mb-2">🚨 Emergency Contacts</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-red-700">Cyber Crime Helpline:</span>
+                        <span className="font-bold text-red-800">1930</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-red-700">Emergency Services:</span>
+                        <span className="font-bold text-red-800">112</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="mt-8 text-center space-y-3">
+            <Button 
+              onClick={() => {
+                setIsSubmitted(false);
+                setSubmissionResult(null);
+              }}
+              className="bg-blue-600 hover:bg-blue-700 mr-4"
+            >
+              Submit Another Report
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={() => window.location.href = '/'}
+            >
+              Return to Home
+            </Button>
+          </div>
         </div>
       </div>
     );
