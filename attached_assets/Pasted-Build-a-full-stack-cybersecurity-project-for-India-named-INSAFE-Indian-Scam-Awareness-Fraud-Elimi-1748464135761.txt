@@ -1,0 +1,105 @@
+Build a full-stack cybersecurity project for India named INSAFE (Indian Scam Awareness & Fraud Elimination) that detects and prevents online money scams (like loan, rummy, phishing), using AI/ML.
+
+Requirements:
+
+🔧 Backend:
+
+Use FastAPI.
+
+Create APIs for:
+
+/scan/url: Detect scam URLs using TF-IDF + Logistic Regression.
+
+/scan/qr: Accept QR image, decode and scan its URL.
+
+/scan/apk: Accept APK file, extract strings, detect scam patterns (loan/rummy).
+
+/scan/sms: Accept text and detect scam SMS using NLP.
+
+/scan/call: Accept call transcript and detect scam attempt.
+
+/report: Accept user-submitted scam app or site reports.
+
+
+Save all scans & reports to MongoDB or PostgreSQL.
+
+
+📊 AI Models:
+
+URL Model: TF-IDF + Logistic Regression.
+
+SMS/Call Text Classifier: Use pretrained NLP (e.g. sklearn, or bert-base-uncased fine-tuned if possible).
+
+APK Analysis: Match strings against a keyword database (loan, rummy, earn, UPI, etc.).
+
+
+🌐 Frontend:
+
+Use React + TailwindCSS.
+
+Pages: Home, Scan URL, Scan QR, Scan APK, Scan SMS, Scan Call, Report Scam.
+
+Components:
+
+Navbar
+
+ResultCard (verdict, confidence)
+
+UploadForms for QR and APK
+
+Text form for SMS and Call
+
+
+
+🗂 Folder Structure:
+
+backend/ (FastAPI code, ML models, preprocessing)
+
+frontend/ (React components and pages)
+
+ml_models/ (Saved models, vectorizers)
+
+dataset/ (CSV datasets for URL and SMS training)
+
+
+📦 Features:
+
+Real-time verdicts.
+
+Accepts user reports for unknown scams.
+
+Logs every scan in DB.
+
+Dockerfile for deployment.
+
+Sample training scripts: train_url_model.py, train_sms_model.py.
+
+
+📍 Indian Context:
+
+Focus on scam patterns common in India:
+
+“Instant loan”, “rummy cash win”, “KBC prize”, “SBI call warning”, “UPI verify”
+
+
+UI in English, but easy to localize.
+
+
+🧪 Test Input Samples:
+
+URL: https://loanapproval.online
+
+SMS: "Congrats! You've won 25 lakh rupees in KBC lottery. Click now."
+
+Call transcript: "Sir, I’m calling from RBI. Share your OTP for verification."
+
+QR code: Should decode to a scammy loan/phishing link
+
+APK: FakeRummy.apk with scam keywords inside
+
+
+🔄 Bonus (Optional):
+
+Add Telegram bot for scanning
+
+Admin dashboard to view flagged scams
