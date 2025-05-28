@@ -265,6 +265,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // AI Pattern Learning Status endpoint
+  app.get("/api/ai-learning/status", async (req, res) => {
+    try {
+      const { aiPatternLearning } = await import('./ai-pattern-learning');
+      const status = aiPatternLearning.getAIStatus();
+      res.json(status);
+    } catch (error) {
+      console.error('Error getting AI learning status:', error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // AI Feedback endpoint
+  app.post("/api/ai-learning/feedback", async (req, res) => {
+    try {
+      const { scanId, feedback, actualThreat } = req.body;
+      
+      if (!scanId || !feedback) {
+        return res.status(400).json({ error: "Scan ID and feedback are required" });
+      }
+
+      const { aiPatternLearning } = await import('./ai-pattern-learning');
+      await aiPatternLearning.provideFeedback(scanId, feedback, actualThreat);
+
+      res.json({ message: "Feedback recorded successfully" });
+    } catch (error) {
+      console.error('Error recording AI feedback:', error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Report submission endpoint
   app.post("/api/report", async (req, res) => {
     try {

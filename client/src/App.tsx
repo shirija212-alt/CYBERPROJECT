@@ -10,6 +10,7 @@ import Learn from "@/pages/learn";
 import Report from "@/pages/report";
 import Analytics from "@/pages/analytics";
 import ThreatIntelligence from "@/pages/threat-intelligence";
+import AILearning from "@/pages/ai-learning";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -23,6 +24,7 @@ function Router() {
         <Route path="/report" component={Report} />
         <Route path="/analytics" component={Analytics} />
         <Route path="/threat-intelligence" component={ThreatIntelligence} />
+        <Route path="/ai-learning" component={AILearning} />
         <Route component={NotFound} />
       </Switch>
     </div>
