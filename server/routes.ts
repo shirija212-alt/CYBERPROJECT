@@ -355,6 +355,173 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Mobile App API Endpoints
+  
+  // Mobile Real-Time Call Screening
+  app.post("/api/mobile/call-screen", async (req, res) => {
+    try {
+      const { phoneNumber, deviceId } = req.body;
+      
+      if (!phoneNumber) {
+        return res.status(400).json({ error: "Phone number is required" });
+      }
+
+      // Combine threat intelligence and AI analysis for mobile
+      const { threatIntelligence } = await import('./threat-intelligence');
+      const { aiPatternLearning } = await import('./ai-pattern-learning');
+      
+      const threatAnalysis = await threatIntelligence.lookupPhoneNumber(phoneNumber);
+      
+      // Mobile-optimized response
+      const mobileResponse = {
+        phoneNumber: threatAnalysis.phoneNumber,
+        action: threatAnalysis.riskLevel === 'dangerous' ? 'BLOCK' : 
+                threatAnalysis.riskLevel === 'suspicious' ? 'WARN' : 'ALLOW',
+        alertLevel: threatAnalysis.riskLevel.toUpperCase(),
+        confidence: threatAnalysis.confidence,
+        displayMessage: threatAnalysis.riskLevel === 'dangerous' 
+          ? `⚠️ SCAMMER ALERT - ${threatAnalysis.sources[0]?.fraudType || 'Fraud'}`
+          : threatAnalysis.riskLevel === 'suspicious'
+          ? `⚠️ Suspicious - ${threatAnalysis.sources.length} reports`
+          : '✅ Safe to answer',
+        reportCount: threatAnalysis.sources.reduce((sum, s) => sum + s.reportCount, 0),
+        sources: threatAnalysis.sources.map(s => s.source),
+        lastUpdated: threatAnalysis.lastChecked,
+        autoBlock: threatAnalysis.riskLevel === 'dangerous'
+      };
+
+      // Learn from mobile usage
+      await aiPatternLearning.learnFromScan({
+        type: 'phone',
+        content: phoneNumber,
+        verdict: threatAnalysis.riskLevel,
+        confidence: threatAnalysis.confidence
+      });
+
+      res.json(mobileResponse);
+    } catch (error) {
+      console.error('Error in mobile call screening:', error);
+      res.status(500).json({ error: "Call screening unavailable" });
+    }
+  });
+
+  // Mobile SMS Filtering
+  app.post("/api/mobile/sms-filter", async (req, res) => {
+    try {
+      const { message, sender, deviceId } = req.body;
+      
+      if (!message) {
+        return res.status(400).json({ error: "Message content is required" });
+      }
+
+      const { aiPatternLearning } = await import('./ai-pattern-learning');
+      const aiPrediction = await aiPatternLearning.predictThreat(message, 'sms');
+
+      // Mobile-optimized SMS filtering response
+      const filterResponse = {
+        action: aiPrediction.verdict === 'dangerous' ? 'QUARANTINE' :
+                aiPrediction.verdict === 'suspicious' ? 'FLAG' : 'ALLOW',
+        verdict: aiPrediction.verdict.toUpperCase(),
+        confidence: aiPrediction.confidence,
+        riskFactors: aiPrediction.riskFactors,
+        notification: aiPrediction.verdict === 'dangerous'
+          ? '🚨 Blocked spam message'
+          : aiPrediction.verdict === 'suspicious'
+          ? '⚠️ Suspicious message flagged'
+          : null,
+        folder: aiPrediction.verdict === 'dangerous' ? 'spam' : 'inbox',
+        allowUserOverride: aiPrediction.verdict !== 'dangerous'
+      };
+
+      // Store scan for learning
+      await storage.createScan({
+        type: 'sms',
+        content: message,
+        verdict: aiPrediction.verdict,
+        confidence: aiPrediction.confidence,
+        riskFactors: aiPrediction.riskFactors,
+        ipAddress: req.ip
+      });
+
+      res.json(filterResponse);
+    } catch (error) {
+      console.error('Error in mobile SMS filtering:', error);
+      res.status(500).json({ error: "SMS filtering unavailable" });
+    }
+  });
+
+  // Mobile Threat Database Sync
+  app.get("/api/mobile/sync/:lastSync", async (req, res) => {
+    try {
+      const { lastSync } = req.params;
+      const lastSyncDate = new Date(parseInt(lastSync));
+
+      // Get recent threat updates for mobile cache
+      const recentScans = await storage.getRecentScans(100);
+      const recentReports = await storage.getReports(50);
+      
+      // Filter updates since last sync
+      const updates = recentScans.filter(scan => scan.timestamp > lastSyncDate);
+      const newReports = recentReports.filter(report => report.timestamp > lastSyncDate);
+
+      // Mobile-optimized sync payload
+      const syncData = {
+        threatUpdates: updates.map(scan => ({
+          phoneNumber: scan.content,
+          threatLevel: scan.verdict,
+          confidence: scan.confidence,
+          timestamp: scan.timestamp
+        })),
+        communityReports: newReports.length,
+        lastSyncTimestamp: Date.now(),
+        recommendedAction: updates.length > 0 ? 'UPDATE_CACHE' : 'NO_ACTION'
+      };
+
+      res.json(syncData);
+    } catch (error) {
+      console.error('Error in mobile sync:', error);
+      res.status(500).json({ error: "Sync unavailable" });
+    }
+  });
+
+  // Mobile Emergency Report
+  app.post("/api/mobile/emergency-report", async (req, res) => {
+    try {
+      const { phoneNumber, messageContent, location, urgency } = req.body;
+
+      if (!phoneNumber && !messageContent) {
+        return res.status(400).json({ error: "Phone number or message required" });
+      }
+
+      // High-priority emergency report
+      const emergencyReport = await storage.createReport({
+        type: urgency === 'HIGH' ? 'emergency' : 'mobile',
+        content: phoneNumber || messageContent,
+        description: `Emergency mobile report: ${urgency} priority from ${location}`,
+        reporterIp: req.ip
+      });
+
+      // Immediate response for mobile
+      res.json({
+        reportId: emergencyReport.id,
+        status: 'RECEIVED',
+        message: '🚨 Emergency report received. Authorities notified.',
+        followUpActions: [
+          'Block the number immediately',
+          'Save evidence (screenshots, recordings)',
+          'Report to local cyber crime cell'
+        ],
+        helplineNumbers: [
+          { name: 'Cyber Crime Helpline', number: '1930' },
+          { name: 'Emergency Services', number: '112' }
+        ]
+      });
+    } catch (error) {
+      console.error('Error in emergency report:', error);
+      res.status(500).json({ error: "Emergency report failed" });
+    }
+  });
+
   // Report submission endpoint
   app.post("/api/report", async (req, res) => {
     try {
