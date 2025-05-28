@@ -202,6 +202,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Phone Number Check endpoint (Truecaller-like)
+  app.post("/api/scan/phone", async (req, res) => {
+    try {
+      const { phoneNumber } = req.body;
+      
+      if (!phoneNumber || typeof phoneNumber !== 'string') {
+        return res.status(400).json({ error: "Phone number is required" });
+      }
+
+      // Known scammer database (in a real app, this would be a comprehensive database)
+      const knownScamNumbers = [
+        { number: "+91-9876543210", type: "Loan Fraud", reports: 342, lastSeen: "2 hours ago" },
+        { number: "+91-8765432109", type: "KBC Lottery Scam", reports: 187, lastSeen: "5 hours ago" },
+        { number: "+91-7654321098", type: "Bank Impersonation", reports: 251, lastSeen: "1 day ago" },
+        { number: "+91-6543210987", type: "Investment Fraud", reports: 89, lastSeen: "3 hours ago" },
+        { number: "+91-5432109876", type: "UPI Fraud", reports: 156, lastSeen: "30 minutes ago" },
+        { number: "+91-4321098765", type: "Tech Support Scam", reports: 73, lastSeen: "4 hours ago" },
+        { number: "+91-3210987654", type: "Romance Scam", reports: 45, lastSeen: "6 hours ago" }
+      ];
+
+      const cleanedPhone = phoneNumber.replace(/\D/g, '');
+      const normalizedPhone = phoneNumber.trim();
+      
+      // Check if number is in scammer database
+      const scammerData = knownScamNumbers.find(scammer => 
+        scammer.number === normalizedPhone || 
+        scammer.number.replace(/\D/g, '') === cleanedPhone
+      );
+
+      let verdict, confidence, riskFactors;
+
+      if (scammerData) {
+        verdict = 'dangerous';
+        confidence = Math.min(85 + Math.floor(scammerData.reports / 10), 95);
+        riskFactors = [
+          `Reported ${scammerData.reports} times for ${scammerData.type}`,
+          `Last seen: ${scammerData.lastSeen}`,
+          'Known scammer in community database',
+          'High fraud risk - Block immediately'
+        ];
+      } else {
+        // Check for suspicious patterns in phone number
+        const suspiciousPatterns = [];
+        
+        // Check for premium numbers
+        if (cleanedPhone.startsWith('900') || cleanedPhone.startsWith('905')) {
+          suspiciousPatterns.push('Premium rate number');
+        }
+        
+        // Check for VOIP numbers (common in scams)
+        if (cleanedPhone.length > 10 && !cleanedPhone.startsWith('91')) {
+          suspiciousPatterns.push('International/VOIP number');
+        }
+
+        if (suspiciousPatterns.length > 0) {
+          verdict = 'suspicious';
+          confidence = 35 + suspiciousPatterns.length * 15;
+          riskFactors = suspiciousPatterns;
+        } else {
+          verdict = 'safe';
+          confidence = Math.floor(Math.random() * 15) + 5;
+          riskFactors = ['No reports found', 'Appears to be legitimate'];
+        }
+      }
+
+      // Save scan result
+      const scan = await storage.createScan({
+        type: 'phone',
+        content: phoneNumber,
+        verdict,
+        confidence,
+        riskFactors,
+        ipAddress: req.ip
+      });
+
+      res.json({
+        id: scan.id,
+        verdict,
+        confidence,
+        riskFactors,
+        timestamp: scan.timestamp,
+        scammerData: scammerData || null
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
   // Report submission endpoint
   app.post("/api/report", async (req, res) => {
     try {
