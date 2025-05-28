@@ -16,11 +16,11 @@ export default function Navbar() {
 
   const NavLink = ({ href, label }: { href: string; label: string }) => (
     <Link href={href}>
-      <a className={`font-medium transition-colors hover:text-blue-600 ${
+      <span className={`font-medium transition-colors hover:text-blue-600 cursor-pointer ${
         location === href ? "text-blue-600 border-b-2 border-blue-600 pb-1" : "text-slate-600"
       }`}>
         {label}
-      </a>
+      </span>
     </Link>
   );
 
