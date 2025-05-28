@@ -9,6 +9,7 @@ import Scan from "@/pages/scan";
 import Learn from "@/pages/learn";
 import Report from "@/pages/report";
 import Analytics from "@/pages/analytics";
+import ThreatIntelligence from "@/pages/threat-intelligence";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -21,6 +22,7 @@ function Router() {
         <Route path="/learn" component={Learn} />
         <Route path="/report" component={Report} />
         <Route path="/analytics" component={Analytics} />
+        <Route path="/threat-intelligence" component={ThreatIntelligence} />
         <Route component={NotFound} />
       </Switch>
     </div>

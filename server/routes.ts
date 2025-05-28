@@ -202,7 +202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Phone Number Check endpoint (Truecaller-like)
+  // Phone Number Check endpoint with Real-Time Threat Intelligence
   app.post("/api/scan/phone", async (req, res) => {
     try {
       const { phoneNumber } = req.body;
@@ -211,81 +211,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Phone number is required" });
       }
 
-      // Known scammer database (in a real app, this would be a comprehensive database)
-      const knownScamNumbers = [
-        { number: "+91-9876543210", type: "Loan Fraud", reports: 342, lastSeen: "2 hours ago" },
-        { number: "+91-8765432109", type: "KBC Lottery Scam", reports: 187, lastSeen: "5 hours ago" },
-        { number: "+91-7654321098", type: "Bank Impersonation", reports: 251, lastSeen: "1 day ago" },
-        { number: "+91-6543210987", type: "Investment Fraud", reports: 89, lastSeen: "3 hours ago" },
-        { number: "+91-5432109876", type: "UPI Fraud", reports: 156, lastSeen: "30 minutes ago" },
-        { number: "+91-4321098765", type: "Tech Support Scam", reports: 73, lastSeen: "4 hours ago" },
-        { number: "+91-3210987654", type: "Romance Scam", reports: 45, lastSeen: "6 hours ago" }
-      ];
+      // Use Real-Time Threat Intelligence for comprehensive analysis
+      const { threatIntelligence } = await import('./threat-intelligence');
+      const analysis = await threatIntelligence.lookupPhoneNumber(phoneNumber);
 
-      const cleanedPhone = phoneNumber.replace(/\D/g, '');
-      const normalizedPhone = phoneNumber.trim();
-      
-      // Check if number is in scammer database
-      const scammerData = knownScamNumbers.find(scammer => 
-        scammer.number === normalizedPhone || 
-        scammer.number.replace(/\D/g, '') === cleanedPhone
-      );
+      // Convert threat analysis to API response format
+      const riskFactors = analysis.sources.length > 0 
+        ? analysis.sources.map(source => `${source.source}: ${source.details}`)
+        : ['No threat intelligence found', 'Number appears safe'];
 
-      let verdict, confidence, riskFactors;
-
-      if (scammerData) {
-        verdict = 'dangerous';
-        confidence = Math.min(85 + Math.floor(scammerData.reports / 10), 95);
-        riskFactors = [
-          `Reported ${scammerData.reports} times for ${scammerData.type}`,
-          `Last seen: ${scammerData.lastSeen}`,
-          'Known scammer in community database',
-          'High fraud risk - Block immediately'
-        ];
-      } else {
-        // Check for suspicious patterns in phone number
-        const suspiciousPatterns = [];
-        
-        // Check for premium numbers
-        if (cleanedPhone.startsWith('900') || cleanedPhone.startsWith('905')) {
-          suspiciousPatterns.push('Premium rate number');
-        }
-        
-        // Check for VOIP numbers (common in scams)
-        if (cleanedPhone.length > 10 && !cleanedPhone.startsWith('91')) {
-          suspiciousPatterns.push('International/VOIP number');
-        }
-
-        if (suspiciousPatterns.length > 0) {
-          verdict = 'suspicious';
-          confidence = 35 + suspiciousPatterns.length * 15;
-          riskFactors = suspiciousPatterns;
-        } else {
-          verdict = 'safe';
-          confidence = Math.floor(Math.random() * 15) + 5;
-          riskFactors = ['No reports found', 'Appears to be legitimate'];
-        }
-      }
-
-      // Save scan result
-      const scan = await storage.createScan({
-        type: 'phone',
-        content: phoneNumber,
-        verdict,
-        confidence,
-        riskFactors,
-        ipAddress: req.ip
-      });
+      // Enhanced scammer data from multiple sources
+      const enhancedScammerData = analysis.sources.length > 0 ? {
+        number: analysis.phoneNumber,
+        type: analysis.sources[0].fraudType,
+        reports: analysis.sources.reduce((total, source) => total + source.reportCount, 0),
+        lastSeen: analysis.sources[0].lastSeen,
+        verified: analysis.sources.some(source => source.verified),
+        sources: analysis.sources.map(source => ({
+          name: source.source,
+          confidence: source.confidence,
+          verified: source.verified
+        }))
+      } : null;
 
       res.json({
-        id: scan.id,
-        verdict,
-        confidence,
+        id: Date.now(), // Temporary ID for response
+        verdict: analysis.riskLevel,
+        confidence: analysis.confidence,
         riskFactors,
-        timestamp: scan.timestamp,
-        scammerData: scammerData || null
+        timestamp: analysis.lastChecked,
+        scammerData: enhancedScammerData,
+        threatIntelligence: {
+          sourcesChecked: analysis.sources.length,
+          lastUpdated: analysis.lastChecked,
+          multiSourceVerification: analysis.sources.length > 1
+        }
       });
     } catch (error) {
+      console.error('Error in threat intelligence lookup:', error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Threat Intelligence Status endpoint
+  app.get("/api/threat-intelligence/status", async (req, res) => {
+    try {
+      const { threatIntelligence } = await import('./threat-intelligence');
+      const status = threatIntelligence.getStatus();
+      res.json(status);
+    } catch (error) {
+      console.error('Error getting threat intelligence status:', error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
