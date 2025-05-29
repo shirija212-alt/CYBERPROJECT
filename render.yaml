@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: insafe-backend
+    env: node
+    plan: starter
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: insafe-db
+          property: connectionString
+    domains:
+      - insafe-platform.onrender.com
+
+databases:
+  - name: insafe-db
+    databaseName: insafe
+    user: insafe_user
+    plan: starter
