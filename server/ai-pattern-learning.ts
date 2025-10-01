@@ -128,7 +128,7 @@ export class AIPatternLearningService {
     const model = this.learningModels.get(type);
     if (!model) {
       return {
-        verdict: 'unknown',
+        verdict: 'safe',
         confidence: 0,
         riskFactors: ['Unknown content type'],
         aiInsights: []
@@ -371,7 +371,7 @@ export class AIPatternLearningService {
 
     try {
       // Get recent training data for each model type
-      for (const [type, model] of this.learningModels) {
+      for (const [type, model] of Array.from(this.learningModels)) {
         const recentData = this.trainingData
           .filter(data => data.type === type)
           .slice(-50); // Use last 50 training examples

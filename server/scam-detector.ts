@@ -1,54 +1,69 @@
-import { ScamPattern } from "@shared/schema";
+import { ScamPattern } from '@shared/schema';
 
 export function detectScamPatterns(content: string, patterns: ScamPattern[]): string[] {
-  const detectedPatterns: string[] = [];
-  const normalizedContent = content.toLowerCase().trim();
-  
-  patterns.forEach(pattern => {
-    if (normalizedContent.includes(pattern.pattern.toLowerCase())) {
-      detectedPatterns.push(pattern.description || pattern.pattern);
+  const riskFactors: string[] = [];
+  const lowerContent = content.toLowerCase();
+
+  // Common scam keywords
+  const scamKeywords = [
+    'lottery', 'winner', 'prize', 'urgent', 'loan', 'instant approval',
+    'without documents', 'click link', 'claim', 'kbc', 'offer'
+  ];
+
+  // Check for scam keywords
+  scamKeywords.forEach(keyword => {
+    if (lowerContent.includes(keyword)) {
+      riskFactors.push(`Suspicious keyword detected: ${keyword}`);
     }
   });
-  
-  return detectedPatterns;
+
+  // Check for URL shorteners
+  const urlShorteners = ['bit.ly', 'goo.gl', 'tinyurl.com', 't.co'];
+  urlShorteners.forEach(shortener => {
+    if (lowerContent.includes(shortener)) {
+      riskFactors.push(`URL shortener detected: ${shortener}`);
+    }
+  });
+
+  // Check for excessive punctuation
+  if ((content.match(/[!?]/g) || []).length > 3) {
+    riskFactors.push('Excessive punctuation');
+  }
+
+  // Check for money amounts
+  if (lowerContent.match(/(\₹|rs\.?|rupees?)\s*\d+/)) {
+    riskFactors.push('Money amount mentioned');
+  }
+
+  // Apply provided patterns
+  patterns.forEach(pattern => {
+    if (pattern.pattern && new RegExp(pattern.pattern, 'i').test(content)) {
+      riskFactors.push(pattern.description ?? 'Pattern matched');
+    }
+  });
+
+  return riskFactors;
 }
 
 export function calculateRiskScore(riskFactors: string[]): number {
   if (riskFactors.length === 0) {
-    return Math.floor(Math.random() * 10) + 5; // 5-15% for clean content
+    return 10; // Base risk for any message
   }
   
-  // Base score on number of risk factors
   let score = 0;
   
-  if (riskFactors.length === 1) {
-    score = 35 + Math.floor(Math.random() * 20); // 35-55%
-  } else if (riskFactors.length === 2) {
-    score = 55 + Math.floor(Math.random() * 25); // 55-80%
-  } else if (riskFactors.length >= 3) {
-    score = 80 + Math.floor(Math.random() * 15); // 80-95%
-  }
-  
-  // Add contextual adjustments
-  const content = riskFactors.join(' ').toLowerCase();
-  
-  // High-risk patterns get higher scores
-  if (content.includes('instant loan') || content.includes('guaranteed win')) {
-    score += 10;
-  }
-  
-  // Authority impersonation is very risky
-  if (content.includes('rbi') || content.includes('bank security')) {
-    score += 15;
-  }
-  
-  // UPI/payment related scams are dangerous
-  if (content.includes('upi pin') || content.includes('otp')) {
-    score += 12;
-  }
-  
-  // Ensure score is within bounds
-  return Math.max(5, Math.min(95, score));
+  riskFactors.forEach(factor => {
+    if (factor.includes('Suspicious keyword')) score += 15;
+    if (factor.includes('URL shortener')) score += 20;
+    if (factor === 'Excessive punctuation') score += 10;
+    if (factor === 'Money amount mentioned') score += 15;
+    if (factor.includes('Request for personal information')) score += 30;
+    if (factor.includes('Impersonation of authority')) score += 35;
+    // Add more specific scores for other risk factors
+  });
+
+  // Normalize score to 0-100 range
+  return Math.min(Math.max(score, 0), 100);
 }
 
 export function analyzeURL(url: string): { riskFactors: string[]; confidence: number } {

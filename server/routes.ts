@@ -5,7 +5,7 @@ import { insertScanSchema, insertReportSchema } from "@shared/schema";
 import { z } from "zod";
 
 // Import scam detection utilities
-import { detectScamPatterns, calculateRiskScore } from "./scam-detector";
+// import { detectScamPatterns, calculateRiskScore } from "./scam-detector";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   
@@ -537,7 +537,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         evidence: req.body.evidence || [],
         timestamp: new Date(),
         location: req.body.location,
-        reporterIp: req.ip
+        reporterIp: req.ip || ""
       };
 
       const processingResult = await smartReportSystem.processUserReport(userReportData);

@@ -91,7 +91,7 @@ export default function ResultCard({ result, type }: ResultCardProps) {
             </div>
           </div>
           <Badge className={verdictStyle.badge}>
-            {result.verdict.toUpperCase()}
+            {result.verdict ? result.verdict.toUpperCase() : "UNKNOWN"}
           </Badge>
         </div>
 

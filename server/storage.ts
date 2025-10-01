@@ -116,7 +116,9 @@ export class MemStorage implements IStorage {
     const scan: Scan = { 
       ...insertScan, 
       id,
-      timestamp: new Date()
+      timestamp: new Date(),
+      riskFactors: insertScan.riskFactors ?? [],
+      ipAddress: insertScan.ipAddress ?? null
     };
     this.scans.set(id, scan);
     return scan;
@@ -166,6 +168,8 @@ export class MemStorage implements IStorage {
     const report: Report = { 
       ...insertReport, 
       id,
+      description: insertReport.description ?? null,
+      reporterIp: insertReport.reporterIp ?? null,
       verified: false,
       timestamp: new Date()
     };
@@ -197,13 +201,16 @@ export class MemStorage implements IStorage {
 
   async createScamPattern(insertPattern: InsertScamPattern): Promise<ScamPattern> {
     const id = this.currentPatternId++;
-    const pattern: ScamPattern = { ...insertPattern, id };
+    const pattern: ScamPattern = { 
+      ...insertPattern, 
+      id, 
+      description: insertPattern.description ?? null 
+    };
     this.scamPatterns.set(id, pattern);
     return pattern;
   }
 }
 
-import { users, scans, reports, scamPatterns, type User, type InsertUser, type Scan, type InsertScan, type Report, type InsertReport, type ScamPattern, type InsertScamPattern } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql } from "drizzle-orm";
 
