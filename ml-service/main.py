@@ -13,18 +13,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load a pre-trained spam detection model (sentiment analysis for now)
-classifier = pipeline("text-classification", model="distilbert-base-uncased-finetuned-sst-2-english")
+# Load a pre-trained zero-shot classification model
+classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
 
 class ScanRequest(BaseModel):
     text: str
+    labels: list[str]
 
-@app.post("/scan/sms")
-async def scan_sms(request: ScanRequest):
-    result = classifier(request.text)[0]
-    is_spam = result["label"] == "NEGATIVE"
+@app.post("/scan")
+async def scan_text(request: ScanRequest):
+    result = classifier(request.text, request.labels)
     return {
         "text": request.text,
-        "isSpam": is_spam,
-        "confidence": result["score"]
+        "labels": result["labels"],
+        "scores": result["scores"]
     }
