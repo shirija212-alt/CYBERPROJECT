@@ -10,6 +10,7 @@ import {
   analyzeAPK,
   analyzePhoneNumber,
 } from "./scam-detector";
+import { getMLVerdict } from "./ml-service";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // URL Scan endpoint
@@ -22,16 +23,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { riskFactors, confidence } = analyzeURL(url);
+      const mlResult = await getMLVerdict(url, ["safe", "phishing", "malware", "scam"]);
+
+      let mlConfidence = 0;
+      if (mlResult) {
+        if (mlResult.label !== "safe") {
+          mlConfidence = mlResult.score * 100;
+        }
+      }
+
+      const combinedConfidence = (confidence + mlConfidence) / 2;
 
       let verdict = "safe";
-      if (confidence >= 70) verdict = "dangerous";
-      else if (confidence >= 40) verdict = "suspicious";
+      if (combinedConfidence >= 70) verdict = "dangerous";
+      else if (combinedConfidence >= 40) verdict = "suspicious";
 
       const scan = await storage.createScan({
         type: "url",
         content: url,
         verdict,
-        confidence,
+        confidence: combinedConfidence,
         riskFactors,
         ipAddress: req.ip,
       });
@@ -39,7 +50,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         id: scan.id,
         verdict,
-        confidence,
+        confidence: combinedConfidence,
         riskFactors,
         timestamp: scan.timestamp,
       });
@@ -58,16 +69,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { riskFactors, confidence } = analyzeSMS(text);
+      const mlResult = await getMLVerdict(text, ["scam", "spam", "safe"]);
+
+      let mlConfidence = 0;
+      if (mlResult) {
+        if (mlResult.label === "scam") {
+          mlConfidence = mlResult.score * 100;
+        } else if (mlResult.label === "spam") {
+          mlConfidence = mlResult.score * 50;
+        }
+      }
+
+      const combinedConfidence = (confidence + mlConfidence) / 2;
 
       let verdict = "safe";
-      if (confidence >= 70) verdict = "dangerous";
-      else if (confidence >= 40) verdict = "suspicious";
+      if (combinedConfidence >= 70) verdict = "dangerous";
+      else if (combinedConfidence >= 40) verdict = "suspicious";
 
       const scan = await storage.createScan({
         type: "sms",
         content: text,
         verdict,
-        confidence,
+        confidence: combinedConfidence,
         riskFactors,
         ipAddress: req.ip,
       });
@@ -75,7 +98,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         id: scan.id,
         verdict,
-        confidence,
+        confidence: combinedConfidence,
         riskFactors,
         timestamp: scan.timestamp,
       });
@@ -97,16 +120,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Assume QR codes contain URLs for now
       const { riskFactors, confidence } = analyzeURL(decodedText);
+      const mlResult = await getMLVerdict(decodedText, ["safe", "phishing", "malware", "scam"]);
+
+      let mlConfidence = 0;
+      if (mlResult) {
+        if (mlResult.label !== "safe") {
+          mlConfidence = mlResult.score * 100;
+        }
+      }
+
+      const combinedConfidence = (confidence + mlConfidence) / 2;
 
       let verdict = "safe";
-      if (confidence >= 70) verdict = "dangerous";
-      else if (confidence >= 40) verdict = "suspicious";
+      if (combinedConfidence >= 70) verdict = "dangerous";
+      else if (combinedConfidence >= 40) verdict = "suspicious";
 
       const scan = await storage.createScan({
         type: "qr",
         content: decodedText,
         verdict,
-        confidence,
+        confidence: combinedConfidence,
         riskFactors,
         ipAddress: req.ip,
       });
@@ -114,7 +147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         id: scan.id,
         verdict,
-        confidence,
+        confidence: combinedConfidence,
         riskFactors,
         timestamp: scan.timestamp,
       });
@@ -138,16 +171,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         appName,
         extractedStrings
       );
+      const mlResult = await getMLVerdict(extractedStrings, ["safe", "malware", "adware", "spyware"]);
+
+      let mlConfidence = 0;
+      if (mlResult) {
+        if (mlResult.label !== "safe") {
+          mlConfidence = mlResult.score * 100;
+        }
+      }
+
+      const combinedConfidence = (confidence + mlConfidence) / 2;
 
       let verdict = "safe";
-      if (confidence >= 70) verdict = "dangerous";
-      else if (confidence >= 40) verdict = "suspicious";
+      if (combinedConfidence >= 70) verdict = "dangerous";
+      else if (combinedConfidence >= 40) verdict = "suspicious";
 
       const scan = await storage.createScan({
         type: "apk",
         content: appName,
         verdict,
-        confidence,
+        confidence: combinedConfidence,
         riskFactors,
         ipAddress: req.ip,
       });
@@ -155,7 +198,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         id: scan.id,
         verdict,
-        confidence,
+        confidence: combinedConfidence,
         riskFactors,
         timestamp: scan.timestamp,
       });
@@ -174,16 +217,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { riskFactors, confidence } = analyzeCall(transcript);
+      const mlResult = await getMLVerdict(transcript, ["scam", "spam", "safe"]);
+
+      let mlConfidence = 0;
+      if (mlResult) {
+        if (mlResult.label === "scam") {
+          mlConfidence = mlResult.score * 100;
+        } else if (mlResult.label === "spam") {
+          mlConfidence = mlResult.score * 50;
+        }
+      }
+
+      const combinedConfidence = (confidence + mlConfidence) / 2;
 
       let verdict = "safe";
-      if (confidence >= 70) verdict = "dangerous";
-      else if (confidence >= 40) verdict = "suspicious";
+      if (combinedConfidence >= 70) verdict = "dangerous";
+      else if (combinedConfidence >= 40) verdict = "suspicious";
 
       const scan = await storage.createScan({
         type: "call",
         content: transcript,
         verdict,
-        confidence,
+        confidence: combinedConfidence,
         riskFactors,
         ipAddress: req.ip,
       });
@@ -191,7 +246,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         id: scan.id,
         verdict,
-        confidence,
+        confidence: combinedConfidence,
         riskFactors,
         timestamp: scan.timestamp,
       });
@@ -209,16 +264,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { riskFactors, confidence } = analyzePhoneNumber(phoneNumber);
+      const mlResult = await getMLVerdict(phoneNumber, ["safe", "spam", "scam"]);
+
+      let mlConfidence = 0;
+      if (mlResult) {
+        if (mlResult.label === "scam") {
+          mlConfidence = mlResult.score * 100;
+        } else if (mlResult.label === "spam") {
+          mlConfidence = mlResult.score * 50;
+        }
+      }
+
+      const combinedConfidence = (confidence + mlConfidence) / 2;
 
       let verdict = "safe";
-      if (confidence >= 70) verdict = "dangerous";
-      else if (confidence >= 40) verdict = "suspicious";
+      if (combinedConfidence >= 70) verdict = "dangerous";
+      else if (combinedConfidence >= 40) verdict = "suspicious";
 
       const scan = await storage.createScan({
         type: "phone",
         content: phoneNumber,
         verdict,
-        confidence,
+        confidence: combinedConfidence,
         riskFactors,
         ipAddress: req.ip,
       });
@@ -226,7 +293,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         id: scan.id,
         verdict,
-        confidence,
+        confidence: combinedConfidence,
         riskFactors,
         timestamp: scan.timestamp,
       });
